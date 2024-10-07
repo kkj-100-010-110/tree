@@ -4,9 +4,10 @@
 - lang: C/C++
 - Dictionary, AVL, Red-Black trees
 - Makefile
-  - make(make all), make clean, make fclean, make re, make valgrind
+  - make(make all), make clean, make fclean, make re, make valgrind(only in rb_c)
 - Test codes in main.
   - I tested some cases for if-clause and some operations.
+- I have yet to finish B-tree
  
 ## Directories
 - rb_c
