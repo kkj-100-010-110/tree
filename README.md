@@ -8,7 +8,7 @@
 - Test codes in main.
   - I tested some cases for if-clause and some operations.
  
-# Directories
+## Directories
 - rb_c
   - red-black tree in c
   - queue.* for print() in rb.*
