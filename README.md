@@ -1,8 +1,7 @@
 # tree
-## Tree
 - Data structure
 - lang: C/C++
-- Dictionary, AVL, Red-Black trees
+- Dictionary(BST), AVL, Red-Black trees
 - Makefile
   - make(make all), make clean, make fclean, make re, make valgrind(only in rb_c)
 - Test codes in main.
