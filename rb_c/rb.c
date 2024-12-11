@@ -29,7 +29,7 @@ RB_tree *rb_create(int (*comparison)(const void*, const void*))
 {
 	RB_tree *t = malloc(sizeof(RB_tree));
 	if (!t) {
-		printf("Error: malloc() failed in rb_create()\n");
+		fprintf(stderr, "Error: malloc() failed in rb_create()\n");
 		return NULL;
 	}
 	t->root = NULL;
@@ -44,7 +44,7 @@ RB_node *rb_node_create(void *key, void *data)
 {
 	RB_node *n = malloc(sizeof(RB_node));
 	if (!n) {
-		printf("Error: malloc() failed in rb_node_create()\n");
+		fprintf(stderr, "Error: malloc() failed in rb_node_create()\n");
 		return NULL;
 	}
 	n->key = key;
@@ -63,7 +63,7 @@ RB_node *rb_node_create(void *key, void *data)
 void rb_insert(RB_tree *t, void *key, void *data)
 {
 	if (!t) {
-		printf("Error: Tree is null in rb_insert()\n");
+		fprintf(stderr, "Error: Tree is null in rb_insert()\n");
 		return;
 	}
 	t->root = _rb_insert(t->root, t->compare, key, data);
@@ -91,7 +91,7 @@ RB_node *_rb_insert(RB_node *n, Compare f, void *key, void *data)
 void rb_remove(RB_tree *t, void *key)
 {
 	if (!rb_contain(t, key)) {
-		printf("Error: There is not the node with the key in rb_remove()\n");
+		fprintf(stderr, "Error: There is not the node with the key in rb_remove()\n");
 		return;
 	}
 	t->root = _rb_remove(t->root, t->compare, key);
@@ -157,7 +157,7 @@ void rb_remove_tree(RB_tree *t)
 void rb_remove_min(RB_tree *t)
 {
 	if (!t->root) {
-		printf("Error: Tree is empty in rb_remove_min()\n");
+		fprintf(stderr, "Error: Tree is empty in rb_remove_min()\n");
 		return;
 	}
 	t->root = _rb_remove_min(t->root);
@@ -170,7 +170,7 @@ void rb_remove_min(RB_tree *t)
 void rb_remove_max(RB_tree *t)
 {
 	if (!t->root) {
-		printf("Error: Tree is empty in rb_remove_min()\n");
+		fprintf(stderr, "Error: Tree is empty in rb_remove_min()\n");
 		return;
 	}
 	t->root = _rb_remove_max(t->root);
@@ -262,7 +262,7 @@ RB_node *rb_move_red_right(RB_node *n)
 RB_node *fix_up(RB_node *n)
 {
 	if (!n) {
-		printf("Error: Node is null in fix_up()\n");
+		fprintf(stderr, "Error: Node is null in fix_up()\n");
 		return NULL;
 	}
 	if (rb_is_red(n->link[RIGHT]) && !rb_is_red(n->link[LEFT])) n = rb_rotate_left(n);
@@ -301,7 +301,7 @@ bool rb_is_red(RB_node *n)
 bool rb_contain(RB_tree *t, void *key)
 {
 	if (!t) {
-		printf("Error: Tree is null in rb_contain()\n");
+		fprintf(stderr, "Error: Tree is null in rb_contain()\n");
 		return NULL;
 	}
 	RB_node *tmp = rb_find(t->root, t->compare, key);
@@ -314,7 +314,7 @@ bool rb_contain(RB_tree *t, void *key)
 void *rb_max_t(RB_tree *t)
 {
 	if (!t) {
-		printf("Error: Tree is null in rb_max_t()\n");
+		fprintf(stderr, "Error: Tree is null in rb_max_t()\n");
 		return NULL;
 	}
 	RB_node *res = rb_max_n(t->root);
@@ -328,7 +328,7 @@ void *rb_max_t(RB_tree *t)
 RB_node *rb_max_n(RB_node *n)
 {
 	if (!n) {
-		printf("Error: Node is null in rb_max_n()\n");
+		fprintf(stderr, "Error: Node is null in rb_max_n()\n");
 		return NULL;
 	}
 	while (n->link[RIGHT])
@@ -342,7 +342,7 @@ RB_node *rb_max_n(RB_node *n)
 void *rb_min_t(RB_tree *t)
 {
 	if (!t) {
-		printf("Error: Tree is null in rb_min_t()\n");
+		fprintf(stderr, "Error: Tree is null in rb_min_t()\n");
 		return NULL;
 	}
 	RB_node *res = rb_min_n(t->root);
@@ -356,7 +356,7 @@ void *rb_min_t(RB_tree *t)
 RB_node *rb_min_n(RB_node *n)
 {
 	if (!n) {
-		printf("Error: Node is null in rb_min_n()\n");
+		fprintf(stderr, "Error: Node is null in rb_min_n()\n");
 		return NULL;
 	}
 	while (n->link[LEFT])

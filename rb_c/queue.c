@@ -4,7 +4,7 @@ Queue *qcreate(void)
 {
 	Queue *new_q = (Queue*)malloc(sizeof(Queue));
 	if (!new_q) {
-		printf("malloc failed in qcreate()\n");
+		fprintf(stderr, "malloc failed in qcreate()\n");
 		return NULL;
 	}
 
@@ -18,7 +18,7 @@ Queue *qcreate(void)
 int qsize(Queue *q)
 {
 	if (!q) {
-		printf("Error: Queue is null in qsize()\n");
+		fprintf(stderr, "Error: Queue is null in qsize()\n");
 		return -1;
 	}
 	return q->size;
@@ -27,7 +27,7 @@ int qsize(Queue *q)
 void *qfront(Queue *q)
 {
 	if (!q) {
-		printf("Error: Queue is null in qfront()\n");
+		fprintf(stderr, "Error: Queue is null in qfront()\n");
 		return NULL;
 	}
 	return q->head->data;
@@ -36,11 +36,11 @@ void *qfront(Queue *q)
 void qpop(Queue *q)
 {
 	if (!q) {
-		printf("Error: Queue is null in qpop()\n");
+		fprintf(stderr, "Error: Queue is null in qpop()\n");
 		return;
 	}
 	if (!q->head) {
-		printf("Error: Queue is empty in qpop()\n");
+		fprintf(stderr, "Error: Queue is empty in qpop()\n");
 		return;
 	}
 	struct qnode *tmp = q->head;
@@ -54,7 +54,7 @@ void qpush(Queue *q, void *d)
 {
 	struct qnode *new_q = (struct qnode*)malloc(sizeof(struct qnode));
 	if (!new_q) {
-		printf("malloc failed in qpush()\n");
+		fprintf(stderr, "malloc failed in qpush()\n");
 		return;
 	}
 	new_q->data = d;
@@ -84,7 +84,7 @@ void qclear(Queue **q)
 void qprint_i(Queue *q)
 {
 	if (!q) {
-		printf("error: queue is null\n");
+		fprintf(stderr, "error: queue is null\n");
 		return ;
 	}
 	struct qnode *tmp = q->head;
@@ -98,7 +98,7 @@ void qprint_i(Queue *q)
 void qprint_s(Queue *q)
 {
 	if (!q) {
-		printf("error: queue is null\n");
+		fprintf(stderr, "error: queue is null\n");
 		return ;
 	}
 	struct qnode *tmp = q->head;
