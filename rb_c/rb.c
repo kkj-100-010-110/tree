@@ -25,7 +25,7 @@ size_t rb_size_n(RB_node *n)
 /*
  * Create a tree.
  */
-RB_tree *rb_create(int (*comparison)(const void*, const void*))
+RB_tree *rb_create(int (*comparison)(const void*, const void*), void (*key_free)(void *), void (*data_free)(void *))
 {
 	RB_tree *t = malloc(sizeof(RB_tree));
 	if (!t) {
@@ -34,6 +34,8 @@ RB_tree *rb_create(int (*comparison)(const void*, const void*))
 	}
 	t->root = NULL;
 	t->compare = comparison;
+	t->key_free = key_free;
+	t->data_free = data_free;
 	return t;
 }
 
@@ -94,7 +96,7 @@ void rb_remove(RB_tree *t, void *key)
 		fprintf(stderr, "Error: There is not the node with the key in rb_remove()\n");
 		return;
 	}
-	t->root = _rb_remove(t->root, t->compare, key);
+	t->root = _rb_remove(t->root, t->compare, t->key_free, t->data_free, key);
 	if (t->root) t->root->color = BLACK;
 }
 
@@ -109,19 +111,23 @@ void rb_remove(RB_tree *t, void *key)
  *  - if it is an internal node, swap the minimum node of its right one(swap the successor for the
  *  target).
  */
-RB_node *_rb_remove(RB_node *n, Compare f, void *key)
+RB_node *_rb_remove(RB_node *n, Compare f, KeyFree kf, DataFree df, void *key)
 {
 	if (f(key, n->key) < 0)
 	{
 		if (!rb_is_red(n->link[LEFT]) && !rb_is_red(n->link[LEFT]->link[LEFT]))
 			n = rb_move_red_left(n);
 
-		n->link[LEFT] = _rb_remove(n->link[LEFT], f, key);
+		n->link[LEFT] = _rb_remove(n->link[LEFT], f, kf, df, key);
 	} else {
 		if (rb_is_red(n->link[LEFT]))
 			n = rb_rotate_right(n);
 
 		if (f(key, n->key) == 0 && !n->link[RIGHT]) {
+			if (kf)
+				free_key(n->key);
+			if (df)
+				free_key(n->data);
 			free(n);
 			return NULL;
 		}
@@ -134,9 +140,9 @@ RB_node *_rb_remove(RB_node *n, Compare f, void *key)
 			RB_node *tmp = rb_min_n(n->link[RIGHT]);
 			n->key = tmp->key;
 			n->data = tmp->data;
-			n->link[RIGHT] = _rb_remove_min(n->link[RIGHT]);
+			n->link[RIGHT] = _rb_remove_min(kf, df, n->link[RIGHT]);
 		} else {
-			n->link[RIGHT] = _rb_remove(n->link[RIGHT], f, key);
+			n->link[RIGHT] = _rb_remove(n->link[RIGHT], f, kf, df, key);
 		}
 	}
 	return fix_up(n);
@@ -160,7 +166,7 @@ void rb_remove_min(RB_tree *t)
 		fprintf(stderr, "Error: Tree is empty in rb_remove_min()\n");
 		return;
 	}
-	t->root = _rb_remove_min(t->root);
+	t->root = _rb_remove_min(t->key_free, t->data_free, t->root);
 	if (t->root) t->root->color = BLACK;
 }
 
@@ -173,7 +179,7 @@ void rb_remove_max(RB_tree *t)
 		fprintf(stderr, "Error: Tree is empty in rb_remove_min()\n");
 		return;
 	}
-	t->root = _rb_remove_max(t->root);
+	t->root = _rb_remove_max(t->key_free, t->data_free, t->root);
 	if (t->root) t->root->color = BLACK;
 }
 
@@ -182,9 +188,13 @@ void rb_remove_max(RB_tree *t)
  * - If the left child node of the current node and its left child node are black
  * - Bottom-up with fix_up() to balance the tree
  */
-RB_node *_rb_remove_min(RB_node *n)
+RB_node *_rb_remove_min(KeyFree kf, DataFree df, RB_node *n)
 {
 	if (!n->link[LEFT]) { // found the min
+		if (kf)
+			free_key(n->key);
+		if (df)
+			free_key(n->data);
 		free(n);
 		return NULL;
 	}
@@ -192,7 +202,7 @@ RB_node *_rb_remove_min(RB_node *n)
 	if (!rb_is_red(n->link[LEFT]) && !rb_is_red(n->link[LEFT]->link[LEFT]))
 		n = rb_move_red_left(n);
 
-	n->link[LEFT] = _rb_remove_min(n->link[LEFT]);
+	n->link[LEFT] = _rb_remove_min(kf, df, n->link[LEFT]);
 	
 	return fix_up(n);
 }
@@ -202,12 +212,16 @@ RB_node *_rb_remove_min(RB_node *n)
  * - If the left link of the current node is black, call rb_rotate_right()
  * - If the right link of the current node and its left link are black, call rb_move_red_right()
  */
-RB_node *_rb_remove_max(RB_node *n)
+RB_node *_rb_remove_max(KeyFree kf, DataFree df, RB_node *n)
 {
 	if (rb_is_red(n->link[LEFT]))
 		n = rb_rotate_right(n);
 
 	if (!n->link[RIGHT]) { // found the max
+		if (kf)
+			free_key(n->key);
+		if (df)
+			free_key(n->data);
 		free(n);
 		return NULL;
 	}
@@ -215,7 +229,7 @@ RB_node *_rb_remove_max(RB_node *n)
 	if (!rb_is_red(n->link[RIGHT]) && !rb_is_red(n->link[RIGHT]->link[LEFT]))
 		n = rb_move_red_right(n);
 
-	n->link[RIGHT] = _rb_remove_max(n->link[RIGHT]);
+	n->link[RIGHT] = _rb_remove_max(kf, df, n->link[RIGHT]);
 
 	return fix_up(n);
 }
@@ -249,6 +263,19 @@ RB_node *rb_move_red_right(RB_node *n)
 		rb_color_flip(n);
 	}
 	return n;
+}
+
+/*
+ * Free key & data.
+ * - callback functions
+ */
+void free_key(void *key)
+{
+	free(key);
+}
+void free_data(void *data)
+{
+	free(data);
 }
 
 /*

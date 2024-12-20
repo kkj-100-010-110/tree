@@ -23,10 +23,14 @@ int comparison_i(const void *p1, const void *p2);
 /* DATA TYPE */
 typedef enum { BLACK=0, RED=1 } Color;
 typedef int (*Compare)(const void*, const void*);
+typedef void (*KeyFree)(void *);
+typedef void (*DataFree)(void *);
 
 typedef struct rb_tree {
 	struct rb_node *root;
 	Compare compare;
+	KeyFree key_free;
+	DataFree data_free;
 } RB_tree;
 
 typedef struct rb_node {
@@ -40,7 +44,7 @@ typedef struct rb_node {
 /* BASIS */
 size_t rb_size_t(RB_tree *t);
 size_t rb_size_n(RB_node *n);
-RB_tree *rb_create(int (*comparison)(const void*, const void*));
+RB_tree *rb_create(int (*comparison)(const void*, const void*), void (*key_free)(void *), void (*data_free)(void *));
 RB_node *rb_node_create(void *key, void *data);
 bool rb_contain(RB_tree *t, void *key);
 bool rb_is_red(RB_node *n);
@@ -56,13 +60,16 @@ RB_node *_rb_insert(RB_node *n, Compare f, void *key, void *data);
 
 /* DELETION */
 void rb_remove(RB_tree *t, void *key);
-RB_node *_rb_remove(RB_node *n, Compare f, void *key);
+RB_node *_rb_remove(RB_node *n, Compare f, KeyFree kf, DataFree df, void *key);
 void rb_remove_tree(RB_tree *t);
 
 void rb_remove_min(RB_tree *t);
 void rb_remove_max(RB_tree *t);
-RB_node *_rb_remove_min(RB_node *n);
-RB_node *_rb_remove_max(RB_node *n);
+RB_node *_rb_remove_min(KeyFree kf, DataFree df, RB_node *n);
+RB_node *_rb_remove_max(KeyFree kf, DataFree df, RB_node *n);
+
+void free_key(void *key);
+void free_data(void *data);
 
 RB_node *rb_move_red_left(RB_node *n);
 RB_node *rb_move_red_right(RB_node *n);

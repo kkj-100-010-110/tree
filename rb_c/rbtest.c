@@ -3,7 +3,7 @@
 int main()
 {
 	// CESARHMHPFNT
-	RB_tree *tt = rb_create(comparison_s);
+	RB_tree *tt = rb_create(comparison_s, NULL, NULL);
 	char *s1 = "C";
 	char *s1_d = "C";
 	char *s2 = "E";
