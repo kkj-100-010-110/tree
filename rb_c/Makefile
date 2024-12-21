@@ -2,7 +2,7 @@ NAME = rbtest
 
 CC = gcc
 
-CFLAGS = -Wall -Werror -Wextra
+CFLAGS = -Wall -Werror -Wextra -g
 
 RM = rm -rf
 

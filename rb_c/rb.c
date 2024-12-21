@@ -68,7 +68,7 @@ void rb_insert(RB_tree *t, void *key, void *data)
 		fprintf(stderr, "Error: Tree is null in rb_insert()\n");
 		return;
 	}
-	t->root = _rb_insert(t->root, t->compare, key, data);
+	_rb_insert(&t->root, t->compare, t->data_free, key, data);
 	if (t->root) t->root->color = BLACK;
 }
 
@@ -78,13 +78,29 @@ void rb_insert(RB_tree *t, void *key, void *data)
  * - One is different which is balancing trees
  * - If the node that has the same key, replace the data with input data
  */
-RB_node *_rb_insert(RB_node *n, Compare f, void *key, void *data)
+void _rb_insert(RB_node **n, Compare f, DataFree df, void *key, void *data)
 {
-	if (!n) n = rb_node_create(key, data);
-	else if (f(n->key, key) == 0) n->data = data;
-	else if (f(n->key, key) < 0) n->link[RIGHT] = _rb_insert(n->link[RIGHT], f, key, data);
-	else n->link[LEFT] = _rb_insert(n->link[LEFT], f, key, data);
-	return fix_up(n);
+	if (!(*n))
+	{
+		(*n) = rb_node_create(key, data);
+		return;
+	}
+	else if (f((*n)->key, key) == 0) {
+		if (df) {
+			free((*n)->data);
+			(*n)->data = NULL;
+		}
+		(*n)->data = data;
+		return;
+	} else if (f((*n)->key, key) < 0) {
+		_rb_insert(&(*n)->link[RIGHT], f, df, key, data);
+		fix_up(n);
+		return;
+	} else {
+		_rb_insert(&(*n)->link[LEFT], f, df, key, data);
+		fix_up((n));
+		return;
+	}
 }
 
 /*
@@ -96,7 +112,7 @@ void rb_remove(RB_tree *t, void *key)
 		fprintf(stderr, "Error: There is not the node with the key in rb_remove()\n");
 		return;
 	}
-	t->root = _rb_remove(t->root, t->compare, t->key_free, t->data_free, key);
+	_rb_remove(&t->root, t->compare, t->key_free, t->data_free, key);
 	if (t->root) t->root->color = BLACK;
 }
 
@@ -111,41 +127,39 @@ void rb_remove(RB_tree *t, void *key)
  *  - if it is an internal node, swap the minimum node of its right one(swap the successor for the
  *  target).
  */
-RB_node *_rb_remove(RB_node *n, Compare f, KeyFree kf, DataFree df, void *key)
+void _rb_remove(RB_node **n, Compare f, KeyFree kf, DataFree df, void *key)
 {
-	if (f(key, n->key) < 0)
+	if (f(key, (*n)->key) < 0)
 	{
-		if (!rb_is_red(n->link[LEFT]) && !rb_is_red(n->link[LEFT]->link[LEFT]))
-			n = rb_move_red_left(n);
-
-		n->link[LEFT] = _rb_remove(n->link[LEFT], f, kf, df, key);
+		if (!rb_is_red((*n)->link[LEFT]) && !rb_is_red((*n)->link[LEFT]->link[LEFT]))
+			rb_move_red_left(n);
+		_rb_remove(&(*n)->link[LEFT], f, kf, df, key);
 	} else {
-		if (rb_is_red(n->link[LEFT]))
-			n = rb_rotate_right(n);
+		if (rb_is_red((*n)->link[LEFT]))
+			rb_rotate_right(n);
 
-		if (f(key, n->key) == 0 && !n->link[RIGHT]) {
-			if (kf)
-				free_key(n->key);
-			if (df)
-				free_key(n->data);
-			free(n);
-			return NULL;
+		if (f(key, (*n)->key) == 0 && !(*n)->link[RIGHT]) {
+			free_key_and_data(kf, df, n);
+			free((*n));
+			*n = NULL;
+			return;
 		}
 
-		if (!rb_is_red(n->link[RIGHT]) && !rb_is_red(n->link[RIGHT]->link[LEFT]))
-			n = rb_move_red_right(n);
+		if (!rb_is_red((*n)->link[RIGHT]) && !rb_is_red((*n)->link[RIGHT]->link[LEFT]))
+			rb_move_red_right(n);
 		
 		// remove the node
-		if (f(key, n->key) == 0) {
-			RB_node *tmp = rb_min_n(n->link[RIGHT]);
-			n->key = tmp->key;
-			n->data = tmp->data;
-			n->link[RIGHT] = _rb_remove_min(kf, df, n->link[RIGHT]);
+		if (f(key, (*n)->key) == 0) {
+			RB_node *tmp = rb_min_n((*n)->link[RIGHT]);
+			free_key_and_data(kf, df, n);
+			(*n)->key = tmp->key;
+			(*n)->data = tmp->data;
+			_rb_remove_min(kf, df, &(*n)->link[RIGHT]);
 		} else {
-			n->link[RIGHT] = _rb_remove(n->link[RIGHT], f, kf, df, key);
+			_rb_remove(&(*n)->link[RIGHT], f, kf, df, key);
 		}
 	}
-	return fix_up(n);
+	fix_up(n);
 }
 
 /*
@@ -166,7 +180,7 @@ void rb_remove_min(RB_tree *t)
 		fprintf(stderr, "Error: Tree is empty in rb_remove_min()\n");
 		return;
 	}
-	t->root = _rb_remove_min(t->key_free, t->data_free, t->root);
+	_rb_remove_min(t->key_free, t->data_free, &t->root);
 	if (t->root) t->root->color = BLACK;
 }
 
@@ -179,7 +193,7 @@ void rb_remove_max(RB_tree *t)
 		fprintf(stderr, "Error: Tree is empty in rb_remove_min()\n");
 		return;
 	}
-	t->root = _rb_remove_max(t->key_free, t->data_free, t->root);
+	_rb_remove_max(t->key_free, t->data_free, &t->root);
 	if (t->root) t->root->color = BLACK;
 }
 
@@ -188,23 +202,19 @@ void rb_remove_max(RB_tree *t)
  * - If the left child node of the current node and its left child node are black
  * - Bottom-up with fix_up() to balance the tree
  */
-RB_node *_rb_remove_min(KeyFree kf, DataFree df, RB_node *n)
+void _rb_remove_min(KeyFree kf, DataFree df, RB_node **n)
 {
-	if (!n->link[LEFT]) { // found the min
-		if (kf)
-			free_key(n->key);
-		if (df)
-			free_key(n->data);
-		free(n);
-		return NULL;
+	if (!(*n)->link[LEFT]) { // found the min
+		free((*n));
+		*n = NULL;
+		return;
 	}
 
-	if (!rb_is_red(n->link[LEFT]) && !rb_is_red(n->link[LEFT]->link[LEFT]))
-		n = rb_move_red_left(n);
+	if (!rb_is_red((*n)->link[LEFT]) && !rb_is_red((*n)->link[LEFT]->link[LEFT]))
+		rb_move_red_left(n);
 
-	n->link[LEFT] = _rb_remove_min(kf, df, n->link[LEFT]);
-	
-	return fix_up(n);
+	_rb_remove_min(kf, df, &(*n)->link[LEFT]);
+	fix_up(n);
 }
 
 /*
@@ -212,57 +222,51 @@ RB_node *_rb_remove_min(KeyFree kf, DataFree df, RB_node *n)
  * - If the left link of the current node is black, call rb_rotate_right()
  * - If the right link of the current node and its left link are black, call rb_move_red_right()
  */
-RB_node *_rb_remove_max(KeyFree kf, DataFree df, RB_node *n)
+void _rb_remove_max(KeyFree kf, DataFree df, RB_node **n)
 {
-	if (rb_is_red(n->link[LEFT]))
-		n = rb_rotate_right(n);
+	if (rb_is_red((*n)->link[LEFT]))
+		rb_rotate_right(n);
 
-	if (!n->link[RIGHT]) { // found the max
-		if (kf)
-			free_key(n->key);
-		if (df)
-			free_key(n->data);
-		free(n);
-		return NULL;
+	if (!(*n)->link[RIGHT]) { // found the max
+		free((*n));
+		*n = NULL;
+		return;
 	}
 
-	if (!rb_is_red(n->link[RIGHT]) && !rb_is_red(n->link[RIGHT]->link[LEFT]))
-		n = rb_move_red_right(n);
+	if (!rb_is_red((*n)->link[RIGHT]) && !rb_is_red((*n)->link[RIGHT]->link[LEFT]))
+		rb_move_red_right(n);
 
-	n->link[RIGHT] = _rb_remove_max(kf, df, n->link[RIGHT]);
-
-	return fix_up(n);
+	_rb_remove_max(kf, df, &(*n)->link[RIGHT]);
+	fix_up(n);
 }
 
 /*
  * Move the red link to the left.
  * - check if the left child node of the right child of the node is red
  */
-RB_node *rb_move_red_left(RB_node *n)
+void rb_move_red_left(RB_node **n)
 {
 	rb_color_flip(n);
 
-	if (rb_is_red(n->link[RIGHT]->link[LEFT])) {
-		n->link[RIGHT] = rb_rotate_right(n->link[RIGHT]);
-		n = rb_rotate_left(n);
+	if (rb_is_red((*n)->link[RIGHT]->link[LEFT])) {
+		rb_rotate_right(&(*n)->link[RIGHT]);
+		rb_rotate_left((n));
 		rb_color_flip(n);
 	}
-	return n;
 }
 
 /*
  * Move the red link to the right.
  * - check if the left child node of the left child of the node is red
  */
-RB_node *rb_move_red_right(RB_node *n)
+void rb_move_red_right(RB_node **n)
 {
 	rb_color_flip(n);
 
-	if (rb_is_red(n->link[LEFT]->link[LEFT])) {
-		n = rb_rotate_right(n);
+	if (rb_is_red((*n)->link[LEFT]->link[LEFT])) {
+		rb_rotate_right(n);
 		rb_color_flip(n);
 	}
-	return n;
 }
 
 /*
@@ -278,6 +282,19 @@ void free_data(void *data)
 	free(data);
 }
 
+void free_key_and_data(KeyFree kf, DataFree df, RB_node **n)
+{
+	if (kf) {
+		kf((*n)->key);
+		(*n)->key = NULL;
+	}
+	if (df) {
+		df((*n)->data);
+		(*n)->data = NULL;
+	}
+}
+
+
 /*
  * Balance trees - when it goes back up to the tree, it fixes up imbalance cases.
  * - any imbalance cases
@@ -286,19 +303,17 @@ void free_data(void *data)
  * - color check
  * 	- if left and right nodes of n are red, change colors
  */
-RB_node *fix_up(RB_node *n)
+void fix_up(RB_node **n)
 {
-	if (!n) {
+	if (!(*n)) {
 		fprintf(stderr, "Error: Node is null in fix_up()\n");
-		return NULL;
+		return;
 	}
-	if (rb_is_red(n->link[RIGHT]) && !rb_is_red(n->link[LEFT])) n = rb_rotate_left(n);
-	if (rb_is_red(n->link[LEFT]) && rb_is_red(n->link[LEFT]->link[LEFT])) n = rb_rotate_right(n);
-	if (rb_is_red(n->link[LEFT]) && rb_is_red(n->link[RIGHT])) rb_color_flip(n);
+	if (rb_is_red((*n)->link[RIGHT]) && !rb_is_red((*n)->link[LEFT])) rb_rotate_left(n);
+	if (rb_is_red((*n)->link[LEFT]) && rb_is_red((*n)->link[LEFT]->link[LEFT])) rb_rotate_right(n);
+	if (rb_is_red((*n)->link[LEFT]) && rb_is_red((*n)->link[RIGHT])) rb_color_flip(n);
 
-	n->size = 1 + rb_size_n(n->link[LEFT]) + rb_size_n(n->link[RIGHT]);
-
-	return n;
+	(*n)->size = 1 + rb_size_n((*n)->link[LEFT]) + rb_size_n((*n)->link[RIGHT]);
 }
 
 /*
@@ -397,32 +412,32 @@ RB_node *rb_min_n(RB_node *n)
  * Rotate the node and its right child node to the left.
  * - When the red link to attach the right of the target node.
  */
-RB_node *rb_rotate_left(RB_node *n)
+void rb_rotate_left(RB_node **n)
 {
-	RB_node *tmp = n->link[RIGHT];
-	n->link[RIGHT] = tmp->link[LEFT];
-	tmp->link[LEFT] = n;
-	tmp->color = n->color;
-	n->color = RED;
-	tmp->size = n->size;
-	n->size = 1 + rb_size_n(n->link[LEFT]) + rb_size_n(n->link[RIGHT]);
-	return tmp;
+	RB_node *tmp = (*n)->link[RIGHT];
+	(*n)->link[RIGHT] = tmp->link[LEFT];
+	tmp->link[LEFT] = (*n);
+	tmp->color = (*n)->color;
+	(*n)->color = RED;
+	tmp->size = (*n)->size;
+	(*n)->size = 1 + rb_size_n((*n)->link[LEFT]) + rb_size_n((*n)->link[RIGHT]);
+	(*n) = tmp;
 }
 
 /*
  * Rotate the node and its right child node to the right.
  * - When the red link is subsequent to the other red link.
  */
-RB_node *rb_rotate_right(RB_node *n)
+void rb_rotate_right(RB_node **n)
 {
-	RB_node *tmp = n->link[LEFT];
-	n->link[LEFT] = tmp->link[RIGHT];
-	tmp->link[RIGHT] = n;
-	tmp->color = n->color;
-	n->color = RED;
-	tmp->size = n->size;
-	n->size = 1 + rb_size_n(n->link[LEFT]) + rb_size_n(n->link[RIGHT]);
-	return tmp;
+	RB_node *tmp = (*n)->link[LEFT];
+	(*n)->link[LEFT] = tmp->link[RIGHT];
+	tmp->link[RIGHT] = (*n);
+	tmp->color = (*n)->color;
+	(*n)->color = RED;
+	tmp->size = (*n)->size;
+	(*n)->size = 1 + rb_size_n((*n)->link[LEFT]) + rb_size_n((*n)->link[RIGHT]);
+	(*n) = tmp;
 }
 
 /* COLOR FLIP */
@@ -431,11 +446,11 @@ RB_node *rb_rotate_right(RB_node *n)
  * Flip the colors of the node and its children.
  * - When both links are red.
  */
-void rb_color_flip(RB_node *n)
+void rb_color_flip(RB_node **n)
 {
-	n->color = !n->color;
-	n->link[LEFT]->color = !n->link[LEFT]->color;
-	n->link[RIGHT]->color = !n->link[RIGHT]->color;
+	(*n)->color = !(*n)->color;
+	(*n)->link[LEFT]->color = !(*n)->link[LEFT]->color;
+	(*n)->link[RIGHT]->color = !(*n)->link[RIGHT]->color;
 	//n->color = rb_color_change(n->color);
 	//n->link[LEFT]->color = rb_color_change(n->link[LEFT]->color);
 	//n->link[RIGHT]->color = rb_color_change(n->link[RIGHT]->color);
@@ -482,21 +497,7 @@ int comparison_i(const void *p1, const void *p2)
  */
 void rb_print(RB_tree *t, int order)
 {
-	if (!t->root)
-	{
-		printf("it's empty.\n");
-		return;
-	}
-    switch (order)
-    {
-        case 1: _print_inorder(t->root); break;
-        case 2: _print_preorder(t->root); break;
-        case 3: _print_postorder(t->root); break;
-        case 4: _print_level_i(t->root); break;
-        case 5: _print_level_s(t->root); break;
-        default : printf("Wrong number for order");
-    }
-    putchar('\n');
+	rb_print_node(t->root, order);
 }
 
 /*
@@ -519,10 +520,21 @@ void rb_print_node(RB_node *n, int order)
         case 3: _print_postorder(n); break;
         case 4: _print_level_i(n); break;
         case 5: _print_level_s(n); break;
+		case 6: _print_inorder_string(n); break;
         default : printf("Wrong number for order");
     }
     putchar('\n');
 }
+
+void _print_inorder_string(RB_node *n)
+{
+	if (!n) return;
+
+	_print_inorder_string(n->link[LEFT]);
+	printf("%s ", (char *)n->key);
+	_print_inorder_string(n->link[RIGHT]);
+}
+
 /* root->left-> right */
 void _print_preorder(RB_node *n)
 {

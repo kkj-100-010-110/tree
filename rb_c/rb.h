@@ -19,6 +19,8 @@
 /* UTILITY */
 int comparison_s(const void *p1, const void *p2);
 int comparison_i(const void *p1, const void *p2);
+void free_key(void *key);
+void free_data(void *data);
 
 /* DATA TYPE */
 typedef enum { BLACK=0, RED=1 } Color;
@@ -56,32 +58,31 @@ RB_node *rb_find(RB_node *n, Compare f, void *key);
 
 /* INSERTION */
 void rb_insert(RB_tree *t, void *key, void *data);
-RB_node *_rb_insert(RB_node *n, Compare f, void *key, void *data);
+void _rb_insert(RB_node **n, Compare f, DataFree df, void *key, void *data);
 
 /* DELETION */
 void rb_remove(RB_tree *t, void *key);
-RB_node *_rb_remove(RB_node *n, Compare f, KeyFree kf, DataFree df, void *key);
+void _rb_remove(RB_node **n, Compare f, KeyFree kf, DataFree df, void *key);
 void rb_remove_tree(RB_tree *t);
 
 void rb_remove_min(RB_tree *t);
 void rb_remove_max(RB_tree *t);
-RB_node *_rb_remove_min(KeyFree kf, DataFree df, RB_node *n);
-RB_node *_rb_remove_max(KeyFree kf, DataFree df, RB_node *n);
+void _rb_remove_min(KeyFree kf, DataFree df, RB_node **n);
+void _rb_remove_max(KeyFree kf, DataFree df, RB_node **n);
 
-void free_key(void *key);
-void free_data(void *data);
+void rb_move_red_left(RB_node **n);
+void rb_move_red_right(RB_node **n);
 
-RB_node *rb_move_red_left(RB_node *n);
-RB_node *rb_move_red_right(RB_node *n);
+void fix_up(RB_node **n);
 
-RB_node *fix_up(RB_node *n);
+void free_key_and_data(KeyFree kf, DataFree df, RB_node **n);
 
 /* ROTATIONS */
-RB_node *rb_rotate_left(RB_node *n);
-RB_node *rb_rotate_right(RB_node *n);
+void rb_rotate_left(RB_node **n);
+void rb_rotate_right(RB_node **n);
 
 /* COLOR FLIP */
-void rb_color_flip(RB_node *n);
+void rb_color_flip(RB_node **n);
 Color rb_color(RB_node *n);
 Color rb_color_change(Color c);
 
@@ -93,5 +94,6 @@ void _print_inorder(RB_node *n);
 void _print_postorder(RB_node *n);
 void _print_level_i(RB_node *n);
 void _print_level_s(RB_node *n);
+void _print_inorder_string(RB_node *n);
 
 #endif//_RED_BLACK_TREE_H_
